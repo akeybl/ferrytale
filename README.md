@@ -10,8 +10,8 @@
 Play classic text adventures or text-based board games by saying or typing what you
 want to do — no parser commands to memorize, no guess-the-verb. Ferrytale narrates
 the story aloud like an audiobook, gives each character their own voice, and listens
-for spoken input, so a decades-old game feels closer to being *inside* the story —
-hopefully breathing life into a declining medium.
+for spoken input, so playing a decades-old game feels closer to being *inside* the
+story — hopefully breathing life into a declining medium.
 
 The quotation marks around "interpreter" are deliberate. A normal IF interpreter
 runs an original story file — a `.gblorb`, `.zblorb`, `.ulx`, `.z5`, or `.z8`.
@@ -23,12 +23,32 @@ embellish scene detail and character responses — but the transcript anchors th
 real plot points, puzzles, and pacing. You are discovering a story a human author
 actually wrote, not one an AI is inventing as you go. That being said, Ferrytale
 does not necessarily know every branch, failure state, or alternate solution the
-original supports. Working in its favor, most classic IF is old enough that
-walkthroughs and discussion are well represented in model training, which helps
-fill the gaps.
+original supports. It helps that most classic IF is old enough for its walkthroughs
+and discussion to be well represented in model training, which fills many of the
+gaps.
 
 For now, Ferrytale has only been tested on a high-end Mac — see
 [Tested configuration](#tested-configuration) for the exact machine and versions.
+
+### See it in action
+
+[![Ferrytale demo — click to watch with sound](assets/demo.gif)](assets/demo.mp4)
+
+<p align="center"><em>Ferrytale playing <a href="https://ifdb.org/viewgame?id=jdrbw1htq4ah8q57">Make It Good</a>
+by Jon Ingold — a washed-up inspector, a body upstairs, and every character
+speaking in their own AI-designed voice. The GIF is a silent excerpt:
+<strong><a href="assets/demo.mp4">watch the full demo with sound</a></strong>,
+including the player speaking commands aloud. Fully re-creatable via
+<a href="scripts/demo/README.md">scripts/demo/</a>.</em></p>
+
+[![Ferrytale demo — Superluminal Vagrant Twin — click to watch with sound](assets/demo-superluminal.gif)](assets/demo-superluminal.mp4)
+
+<p align="center"><em>Ferrytale playing <a href="https://ifdb.org/viewgame?id=5xzoz5wimz4xxha">Superluminal Vagrant Twin</a>
+by C.E.J. Pacian — a broke space captain, a golden-haired stranger with a
+ten-million-cred job, and the ship's engineer crackling in over the comms,
+each in their own voice and color. Silent excerpt:
+<strong><a href="assets/demo-superluminal.mp4">watch the full demo with
+sound</a></strong>.</em></p>
 
 ### Features
 
@@ -97,9 +117,9 @@ game downloads only that game's transcript; nothing else is committed to the rep
 
 **Please support the authors.** These are real games by real people, and Ferrytale is
 a way to *experience* their work, not a substitute for it. If a game you play here
-can be bought — or its author tipped or donated to — please do, ideally before you
-play through it. Many classic IF games are free, but supporting the people who made
-them is what keeps the medium alive. For example, *Anchorhead* — the game used in
+can be bought, or its author accepts tips or donations, please support them —
+ideally before you play through it. Many classic IF games are free, but supporting
+the people who made them is what keeps the medium alive. For example, *Anchorhead* — the game used in
 the Quick Start above — can be bought on
 [Steam](https://store.steampowered.com/app/726870/Anchorhead/).
 
@@ -108,8 +128,8 @@ OCR'd or transcribed Markdown-style transcript as `transcripts/<slug>.txt`.
 Ferrytale never fetches transcripts from non-ClubFloyd sources on its own.
 
 **Mysteries are an especially good fit** — questioning suspects, chasing leads, and
-assembling story state all map naturally onto the interaction model. A couple worth
-pointing at:
+assembling story state all map naturally onto the interaction model. Two worth
+highlighting:
 
 - [Sherlock Holmes Consulting Detective](https://www.spacecowboys-games.com/universe/sherlockholmesconsultingdetective/)
   from Space Cowboys — a standalone box runs about `$59.99` via
@@ -118,7 +138,7 @@ pointing at:
 - [A Speakeasy Murder](https://www.freeformgames.com/product/a-speakeasy-murder/)
   from Freeform Games — listed around `£41.99`.
 
-Prices drift; treat these as rough source costs.
+Prices drift; treat them as ballpark figures.
 
 ## Choosing a mode
 
@@ -289,7 +309,7 @@ The mic runs at 16 kHz through a short pipeline:
 4. A short proper-noun prompt, built from the loaded transcript, aids recognition.
 
 If a real transcription comes through, playback stops and your words are submitted
-as player input. Empty or noise transcriptions just resume playback.
+as player input. Empty or noise-only transcriptions simply resume playback.
 
 ### Audiobook output
 
@@ -306,8 +326,8 @@ wait before you hear anything:
 ./play --kokoro anchorhead
 ```
 
-(`--omnivoice` forces the default engine back, if you have set `IF_ENGINE_TTS_ENGINE`
-in `.env`.)
+(`--omnivoice` switches back to the default engine if you have set
+`IF_ENGINE_TTS_ENGINE` in `.env`.)
 
 `IF_ENGINE_KOKORO_VOICE` picks the Kokoro voice *name* (default `bm_george`) — it
 does not turn voice on or off, so use `--no-voice` to disable voice. (The older
@@ -322,11 +342,11 @@ example, `female, warm, mid-pitch, american accent`). With **Kokoro**, set
 `IF_ENGINE_KOKORO_VOICE` to a Kokoro voice name. See
 [Advanced voice settings](#advanced-voice-settings) for the rest.
 
-Each visual chunk appears on screen as its audio begins. (Resumed sessions replay
-text only — they are not re-spoken.) With OmniVoice, every synthesized chunk is
-aligned with whisper.cpp afterward, so text surfaces sentence by sentence exactly
+Each chunk of text appears on screen as its audio begins playing. (Resumed sessions
+replay text only — they are not re-spoken.) With OmniVoice, every synthesized chunk
+is aligned with whisper.cpp afterward, so text surfaces sentence by sentence exactly
 as playback reaches the first word of each sentence — even when the audio was
-generated as the rest of a paragraph or a full paragraph. Audio cues like `[sigh]`
+generated in larger pieces. Audio cues like `[sigh]`
 and `[laughter]` are spoken only; they are stripped from display and replay text.
 
 ### Character voices
@@ -855,7 +875,7 @@ A few directions Ferrytale could grow (contributions welcome):
 
 Ferrytale's author is a software Product Manager with an engineering background, so
 the project is vibe-coded — much like OpenClaw — but the hope is that the vision
-comes through and gets the chance to grow.
+comes through and the project gets the chance to grow.
 
 Pull requests are welcome. For discussion, feedback, and experiments, join the
 [Discord server](https://discord.gg/QNDhbYWKr4).

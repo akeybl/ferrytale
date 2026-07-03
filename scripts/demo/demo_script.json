@@ -1,0 +1,26 @@
+{
+  "name": "demo",
+  "game": "make-it-good",
+  "session": "demo-make-it-good",
+  "comment": "Demo storyline for the README video. The captured session (scripts/demo/capture_session.py) holds the full playthrough; the video window covers the last `window_turns` player turns, with everything earlier shown as scrollback. Each step's `spoken` line is played aloud with the cached ElevenLabs player voice, then submitted as voice input; it must match the captured player event text exactly.",
+  "window_turns": 3,
+  "opening": {
+    "comment": "The video opens on the previous turn shown as a freshly displayed live page: its player input pinned at the top, and the narration trimmed to begin at `narration_from`.",
+    "narration_from": "Mrs. Draginam shuts the door firmly behind you"
+  },
+  "steps": [
+    {
+      "spoken": "No thanks, ma'am — I'll keep the hat. Just show me where he is.",
+      "pause_before_seconds": 1.0
+    },
+    {
+      "spoken": "Push open that bedroom door.",
+      "pause_before_seconds": 1.2
+    },
+    {
+      "spoken": "Kneel down next to Jack... and go through his pockets.",
+      "pause_before_seconds": 1.2
+    }
+  ],
+  "outro_hold_seconds": 3.5
+}

@@ -3377,6 +3377,11 @@ class Game:
                 rollback_snapshot=rollback_snapshot,
                 cancel_snapshot=self.pending_player_cancel_snapshot() or rollback_snapshot,
             )
+        else:
+            # Resumed session with nothing to answer: the "Loading game..."
+            # spinner label is only for a startup model call — an ordinary
+            # first turn must not inherit it.
+            ui.first_spinner_label_pending = False
 
         try:
             while True:

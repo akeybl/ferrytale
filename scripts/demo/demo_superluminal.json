@@ -1,0 +1,25 @@
+{
+  "name": "demo-superluminal",
+  "game": "superluminal-vagrant-twin",
+  "session": "demo-superluminal",
+  "comment": "Second README demo: Superluminal Vagrant Twin. Opens on the Boony landing page (Szymon and Aurea both speaking), then the player walks into the saloon with the comm channel open, talks to Aurea, and calls up to Szymon.",
+  "window_turns": 3,
+  "opening": {
+    "comment": "The full landing page, shown as a freshly displayed live page with its input pinned on top — it already carries both character voices."
+  },
+  "steps": [
+    {
+      "spoken": "Head into the saloon. Szy, stay on the open channel and give me your read of this place while I walk in.",
+      "pause_before_seconds": 1.0
+    },
+    {
+      "spoken": "Take the stool next to her. A miracle, mostly. Start talking — who are you, and what's the job?",
+      "pause_before_seconds": 1.2
+    },
+    {
+      "spoken": "Szy, you still on the line? Ten million credits. Tell me straight — can this ship crack Hardshell?",
+      "pause_before_seconds": 1.2
+    }
+  ],
+  "outro_hold_seconds": 3.5
+}
