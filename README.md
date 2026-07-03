@@ -37,6 +37,8 @@ For now, Ferrytale has only been tested on a high-end Mac — see
   <sub><em>Ferrytale playing <a href="https://ifdb.org/viewgame?id=jdrbw1htq4ah8q57">Make It Good</a> by Jon Ingold — a washed-up inspector, a body upstairs, and every character in their own AI-designed voice. Silent excerpt — <strong><a href="assets/demo.mp4">watch with sound</a></strong></em></sub>
 </p>
 
+<br>
+
 <p align="center">
   <a href="assets/demo-superluminal.mp4"><img src="assets/demo-superluminal.gif" alt="Ferrytale playing Superluminal Vagrant Twin — click to watch with sound"></a><br>
   <sub><em>Ferrytale playing <a href="https://ifdb.org/viewgame?id=5xzoz5wimz4xxha">Superluminal Vagrant Twin</a> by C.E.J. Pacian — a broke space captain, a ten-million-cred job, and the ship's engineer crackling in over the comms, each voice in its own color. Silent excerpt — <strong><a href="assets/demo-superluminal.mp4">watch with sound</a></strong></em></sub>
