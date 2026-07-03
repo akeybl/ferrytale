@@ -1,0 +1,3 @@
+-r requirements-voice-common.txt
+
+kokoro==0.9.4

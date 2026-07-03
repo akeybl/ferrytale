@@ -1,0 +1,11 @@
+{
+  "model_name": "okay_fastmix",
+  "phrase": "okay",
+  "created_at": "2026-06-17T19:04:01.910627+00:00",
+  "source_candidate": "okay_fastmix_candidate_20260617_1619.onnx",
+  "runtime_path": "models/wake-word/okay.onnx",
+  "notes": [
+    "Custom openWakeWord ONNX model for IF engine voice mode.",
+    "Trained with IF command negatives and fast/short okay variants."
+  ]
+}

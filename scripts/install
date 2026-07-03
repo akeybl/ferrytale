@@ -1,0 +1,353 @@
+#!/usr/bin/env bash
+# Bootstrap Ferrytale's local runtime. The launcher calls this before running
+# Python, and the stamp files keep normal runs fast after the first install.
+set -euo pipefail
+
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+cd "$ROOT"
+
+MODE=base
+SKIP_MODELS=0
+FORCE=0
+
+usage() {
+  cat <<'USAGE'
+Usage: scripts/install [--base|--voice] [--skip-model-downloads] [--force]
+
+  --base                 install only the text-mode Python dependencies
+  --voice                install voice dependencies and whisper.cpp assets
+                         for IF_ENGINE_TTS_ENGINE (omnivoice by default)
+  --skip-model-downloads install Python voice deps but do not fetch/build whisper.cpp
+  --force                reinstall even if dependency stamps match
+USAGE
+}
+
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --base)
+      MODE=base
+      shift
+      ;;
+    --voice)
+      MODE=voice
+      shift
+      ;;
+    --skip-model-downloads)
+      SKIP_MODELS=1
+      shift
+      ;;
+    --force)
+      FORCE=1
+      shift
+      ;;
+    -h|--help)
+      usage
+      exit 0
+      ;;
+    *)
+      echo "scripts/install: unknown argument: $1" >&2
+      usage >&2
+      exit 2
+      ;;
+  esac
+done
+
+log() { printf '[install] %s\n' "$*" >&2; }
+
+sha256_files() {
+  if command -v shasum >/dev/null 2>&1; then
+    shasum -a 256 "$@" | shasum -a 256 | awk '{print $1}'
+  elif command -v sha256sum >/dev/null 2>&1; then
+    sha256sum "$@" | sha256sum | awk '{print $1}'
+  else
+    echo "scripts/install: shasum or sha256sum is required" >&2
+    exit 1
+  fi
+}
+
+python_is_312() {
+  "$1" - <<'PY' >/dev/null 2>&1
+import sys
+raise SystemExit(0 if sys.version_info[:2] == (3, 12) else 1)
+PY
+}
+
+python_version() {
+  "$1" - <<'PY'
+import sys
+print(".".join(map(str, sys.version_info[:3])))
+PY
+}
+
+find_python() {
+  local candidates=()
+  if [[ -n "${IF_ENGINE_PYTHON:-}" ]]; then
+    candidates+=("$IF_ENGINE_PYTHON")
+  fi
+  candidates+=("python3.12" "/opt/homebrew/bin/python3.12" "/usr/local/bin/python3.12" "/opt/homebrew/opt/python@3.12/bin/python3.12" "/usr/local/opt/python@3.12/bin/python3.12" "python3")
+
+  local candidate path
+  for candidate in "${candidates[@]}"; do
+    if [[ "$candidate" == */* ]]; then
+      path="$candidate"
+      [[ -x "$path" ]] || continue
+    else
+      path="$(command -v "$candidate" 2>/dev/null || true)"
+      [[ -n "$path" ]] || continue
+    fi
+    if python_is_312 "$path"; then
+      printf '%s\n' "$path"
+      return 0
+    fi
+  done
+
+  echo "scripts/install: Python 3.12 is required (the voice stack — torch 2.4.0 / kokoro — has no wheels for 3.13+)." >&2
+  echo "Install it with one of:" >&2
+  echo "  brew install python@3.12     # macOS / Homebrew" >&2
+  echo "  pyenv install 3.12           # pyenv" >&2
+  echo "then re-run, or set IF_ENGINE_PYTHON=/path/to/python3.12 to point at an existing 3.12." >&2
+  exit 1
+}
+
+PYTHON="$(find_python)"
+VENV="$ROOT/.venv"
+VENV_PY="$VENV/bin/python"
+VENV_PIP="$VENV/bin/pip"
+
+if [[ ! -x "$VENV_PY" ]]; then
+  log "creating .venv with $PYTHON"
+  "$PYTHON" -m venv "$VENV"
+elif ! python_is_312 "$VENV_PY"; then
+  echo "scripts/install: existing .venv uses Python $(python_version "$VENV_PY"), but Python 3.12 is required." >&2
+  echo "Remove .venv or recreate it with Python 3.12 (brew install python@3.12, pyenv install 3.12, or set IF_ENGINE_PYTHON=/path/to/python3.12)." >&2
+  exit 1
+fi
+
+export PIP_DISABLE_PIP_VERSION_CHECK=1
+
+load_env_for_install() {
+  [[ -f "$ROOT/.env" ]] || return 0
+  local line key value
+  while IFS= read -r line || [[ -n "$line" ]]; do
+    line="${line#"${line%%[![:space:]]*}"}"
+    [[ -n "$line" && "$line" != \#* && "$line" == *=* ]] || continue
+    key="${line%%=*}"
+    value="${line#*=}"
+    key="${key%"${key##*[![:space:]]}"}"
+    value="${value#"${value%%[![:space:]]*}"}"
+    value="${value%"${value##*[![:space:]]}"}"
+    value="${value%\"}"
+    value="${value#\"}"
+    value="${value%\'}"
+    value="${value#\'}"
+    case "$key" in
+      IF_ENGINE_TTS_ENGINE|IF_ENGINE_WHISPER_DIR|IF_ENGINE_WHISPER_CLI|IF_ENGINE_WHISPER_MODEL|IF_ENGINE_WHISPER_VAD_MODEL)
+        if [[ -z "${!key:-}" ]]; then
+          export "$key=$value"
+        fi
+        ;;
+    esac
+  done < "$ROOT/.env"
+}
+
+selected_tts_engine() {
+  local engine="${IF_ENGINE_TTS_ENGINE:-omnivoice}"
+  engine="$(printf '%s' "$engine" | tr '[:upper:]' '[:lower:]')"
+  engine="${engine#"${engine%%[![:space:]]*}"}"
+  engine="${engine%"${engine##*[![:space:]]}"}"
+  [[ -n "$engine" ]] || engine=omnivoice
+  case "$engine" in
+    omnivoice|kokoro)
+      printf '%s\n' "$engine"
+      ;;
+    *)
+      echo "scripts/install: unknown IF_ENGINE_TTS_ENGINE '$engine'; expected 'omnivoice' or 'kokoro'" >&2
+      exit 1
+      ;;
+  esac
+}
+
+install_requirements() {
+  local name="$1"
+  local req_file="$2"
+  shift 2
+  local stamp="$VENV/.if-ai-${name}.sha256"
+  local digest
+  digest="$(sha256_files "$ROOT/scripts/install" "$req_file" "$@")"
+  if [[ "$FORCE" -eq 0 && -f "$stamp" && "$(cat "$stamp")" == "$digest" ]]; then
+    return 0
+  fi
+  log "installing Python ${name} dependencies"
+  "$VENV_PY" -m pip install --upgrade pip setuptools wheel
+  "$VENV_PIP" install -r "$req_file"
+  "$VENV_PY" -m pip check
+  printf '%s\n' "$digest" > "$stamp"
+}
+
+load_env_for_install
+install_requirements base "$ROOT/requirements.txt"
+
+if [[ "$MODE" != "voice" ]]; then
+  exit 0
+fi
+
+TTS_ENGINE="$(selected_tts_engine)"
+VOICE_REQUIREMENTS="$ROOT/requirements-voice-$TTS_ENGINE.txt"
+log "selected $TTS_ENGINE TTS engine"
+install_requirements \
+  "voice-$TTS_ENGINE" \
+  "$VOICE_REQUIREMENTS" \
+  "$ROOT/requirements-voice-common.txt" \
+  "$ROOT/requirements.txt"
+
+if [[ "$SKIP_MODELS" -eq 1 || "${IF_ENGINE_SKIP_MODEL_DOWNLOADS:-}" == "1" ]]; then
+  log "skipping whisper.cpp model setup"
+  exit 0
+fi
+
+ensure_xcode_clt() {
+  [[ "$(uname -s)" == "Darwin" ]] || return 0
+  xcrun --find clang >/dev/null 2>&1 && return 0
+  log "Xcode Command Line Tools are required — opening Apple's installer…"
+  xcode-select --install >/dev/null 2>&1 || true
+  echo "scripts/install: approve the 'Command Line Tools' install in the popup, then re-run ./play." >&2
+  echo "(Or skip voice with ./play --no-voice.)" >&2
+  exit 1
+}
+
+ensure_homebrew() {
+  command -v brew >/dev/null 2>&1 && return 0
+  local brew_bin
+  for brew_bin in /opt/homebrew/bin/brew /usr/local/bin/brew; do
+    if [[ -x "$brew_bin" ]]; then
+      eval "$("$brew_bin" shellenv)"
+      command -v brew >/dev/null 2>&1 && return 0
+    fi
+  done
+  log "Homebrew not found — installing it now (you may be prompted for your password)…"
+  local installer
+  installer="$(mktemp)" || return 1
+  if ! curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh -o "$installer"; then
+    rm -f "$installer"
+    return 1
+  fi
+  if NONINTERACTIVE=1 /bin/bash "$installer"; then
+    rm -f "$installer"
+  else
+    rm -f "$installer"
+    return 1
+  fi
+  for brew_bin in /opt/homebrew/bin/brew /usr/local/bin/brew; do
+    [[ -x "$brew_bin" ]] && eval "$("$brew_bin" shellenv)" && break
+  done
+  command -v brew >/dev/null 2>&1
+}
+
+ensure_voice_system_dependencies() {
+  if [[ "$(uname -s)" == "Darwin" ]]; then
+    # macOS: set up the toolchain automatically — Apple's Command Line Tools,
+    # then Homebrew, then the audio/build packages voice mode needs.
+    ensure_xcode_clt
+    if ! ensure_homebrew; then
+      echo "scripts/install: Homebrew is needed for voice mode but could not be installed automatically." >&2
+      echo "Install it once with:" >&2
+      echo '  /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"' >&2
+      echo "then re-run ./play — or use ./play --no-voice to skip voice." >&2
+      exit 1
+    fi
+    local brew_packages=()
+    local item
+    for item in git curl cmake make; do
+      command -v "$item" >/dev/null 2>&1 || brew_packages+=("$item")
+    done
+    if ! "$VENV_PY" - <<'PY' >/dev/null 2>&1
+import ctypes.util
+raise SystemExit(0 if ctypes.util.find_library("portaudio") else 1)
+PY
+    then
+      brew list --formula portaudio >/dev/null 2>&1 || brew_packages+=(portaudio)
+    fi
+    command -v ffmpeg >/dev/null 2>&1 || brew_packages+=(ffmpeg)
+    if [[ "${#brew_packages[@]}" -gt 0 ]]; then
+      log "installing system packages: ${brew_packages[*]}"
+      if ! brew install "${brew_packages[@]}"; then
+        echo "scripts/install: could not install: ${brew_packages[*]}. Run 'brew install ${brew_packages[*]}' manually, then re-run." >&2
+        exit 1
+      fi
+    fi
+  else
+    # Other platforms are best-effort; Ferrytale is developed and tested on macOS.
+    local missing=()
+    local item
+    for item in git curl cmake make; do
+      command -v "$item" >/dev/null 2>&1 || missing+=("$item")
+    done
+    if [[ "${#missing[@]}" -gt 0 ]]; then
+      echo "scripts/install: missing required build tools: ${missing[*]} — install them with your package manager, then re-run." >&2
+      exit 1
+    fi
+    if ! "$VENV_PY" - <<'PY' >/dev/null 2>&1
+import ctypes.util
+raise SystemExit(0 if ctypes.util.find_library("portaudio") else 1)
+PY
+    then
+      log "libportaudio not found — on Debian/Ubuntu: sudo apt install libportaudio2 portaudio19-dev ; on Fedora: sudo dnf install portaudio portaudio-devel"
+    fi
+    command -v ffmpeg >/dev/null 2>&1 || log "ffmpeg is optional but recommended for ElevenLabs preview scoring"
+  fi
+}
+
+ensure_voice_system_dependencies
+
+WHISPER_DIR="${IF_ENGINE_WHISPER_DIR:-$ROOT/.cache/whisper.cpp}"
+WHISPER_CLI="${IF_ENGINE_WHISPER_CLI:-$WHISPER_DIR/build/bin/whisper-cli}"
+WHISPER_MODEL="${IF_ENGINE_WHISPER_MODEL:-$WHISPER_DIR/models/ggml-large-v3-turbo-q5_0.bin}"
+WHISPER_VAD_MODEL="${IF_ENGINE_WHISPER_VAD_MODEL:-$WHISPER_DIR/models/ggml-silero-v6.2.0.bin}"
+
+if [[ -n "${IF_ENGINE_WHISPER_CLI:-}" && ! -x "$WHISPER_CLI" ]]; then
+  echo "scripts/install: IF_ENGINE_WHISPER_CLI is set but not executable: $WHISPER_CLI" >&2
+  exit 1
+fi
+if [[ -n "${IF_ENGINE_WHISPER_MODEL:-}" && ! -f "$WHISPER_MODEL" ]]; then
+  echo "scripts/install: IF_ENGINE_WHISPER_MODEL is set but missing: $WHISPER_MODEL" >&2
+  exit 1
+fi
+if [[ -n "${IF_ENGINE_WHISPER_VAD_MODEL:-}" && ! -f "$WHISPER_VAD_MODEL" ]]; then
+  echo "scripts/install: IF_ENGINE_WHISPER_VAD_MODEL is set but missing: $WHISPER_VAD_MODEL" >&2
+  exit 1
+fi
+
+if [[ -n "${IF_ENGINE_WHISPER_CLI:-}" && -n "${IF_ENGINE_WHISPER_MODEL:-}" && -n "${IF_ENGINE_WHISPER_VAD_MODEL:-}" ]]; then
+  log "using configured whisper.cpp paths"
+  log "voice dependencies are ready"
+  exit 0
+fi
+
+if [[ ! -d "$WHISPER_DIR/.git" ]]; then
+  if [[ -e "$WHISPER_DIR" && -n "$(find "$WHISPER_DIR" -mindepth 1 -maxdepth 1 2>/dev/null | head -1)" ]]; then
+    echo "scripts/install: $WHISPER_DIR exists but is not a whisper.cpp checkout" >&2
+    exit 1
+  fi
+  mkdir -p "$(dirname "$WHISPER_DIR")"
+  log "cloning whisper.cpp into $WHISPER_DIR"
+  # Pinned to a known-good release tag; bump to a newer tag as whisper.cpp updates.
+  git clone --depth 1 --branch v1.9.1 https://github.com/ggml-org/whisper.cpp.git "$WHISPER_DIR"
+fi
+
+if [[ ! -x "$WHISPER_CLI" ]]; then
+  log "building whisper.cpp"
+  cmake -S "$WHISPER_DIR" -B "$WHISPER_DIR/build" -DCMAKE_BUILD_TYPE=Release
+  cmake --build "$WHISPER_DIR/build" --config Release --parallel
+fi
+
+mkdir -p "$WHISPER_DIR/models"
+if [[ ! -f "$WHISPER_MODEL" ]]; then
+  log "downloading whisper.cpp model large-v3-turbo-q5_0"
+  "$WHISPER_DIR/models/download-ggml-model.sh" large-v3-turbo-q5_0 "$WHISPER_DIR/models"
+fi
+if [[ ! -f "$WHISPER_VAD_MODEL" ]]; then
+  log "downloading whisper.cpp VAD model silero-v6.2.0"
+  "$WHISPER_DIR/models/download-vad-model.sh" silero-v6.2.0 "$WHISPER_DIR/models"
+fi
+
+log "voice dependencies are ready"

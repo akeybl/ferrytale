@@ -1,0 +1,229 @@
+#!/usr/bin/env bash
+# Friendly launcher for Ferrytale.
+#
+#   ./play                     resume your most recent session (any game)
+#   ./play <game>              resume your most recent session of <game>,
+#                              or start one if you've never played it
+#   ./play --new <game>        start a fresh playthrough of <game>
+#   ./play --new --fast-mode <game>
+#                              start fresh using Gemini priority tier
+#   ./play --no-voice <game>   type commands and skip voice dependencies
+#   ./play --car-mode <game>   enable car/Bluetooth wake-word defaults
+#   ./play --whisper-tags <game>
+#                              allow OmniVoice <whisper> style tags
+#   ./play <session-name>      resume a specific session by exact name
+#   ./play games [filter]      list games (optionally filtered)
+#   ./play sessions            list saved sessions
+#   ./play --flags…            passed straight to ferrytale.py (e.g. --no-voice)
+#
+# Game names match loosely: ./play super, ./play "superluminal vagrant twin", ./play pacian —
+# exact catalog slugs win, otherwise a unique title/author/slug match runs
+# and multiple matches are listed.
+set -euo pipefail
+cd "$(dirname "$0")"
+BOOTSTRAP=scripts/install
+PY=.venv/bin/python
+ENGINE=ferrytale.py
+
+usage() { sed -n '2,17p' "$0" | sed 's/^# \{0,1\}//'; }
+
+case "${1:-}" in
+  -h|--help|help)
+    usage
+    exit 0
+    ;;
+esac
+
+launcher_needs_voice() {
+  case "${1:-}" in
+    games|sessions|--list|--list-games|--show-config)
+      return 1
+      ;;
+  esac
+
+  local voice_flag=auto arg
+  for arg in "$@"; do
+    case "$arg" in
+      --voice)
+        voice_flag=1
+        ;;
+      --no-voice)
+        voice_flag=0
+        ;;
+    esac
+  done
+  if [[ "$voice_flag" == "1" ]]; then
+    return 0
+  fi
+  if [[ "$voice_flag" == "0" ]]; then
+    return 1
+  fi
+  [[ -t 0 && -t 1 ]]
+}
+
+# Map --kokoro / --omnivoice to IF_ENGINE_TTS_ENGINE before bootstrap so the
+# installer pulls the matching voice dependencies. The flag also flows through to
+# ferrytale.py below.
+apply_tts_flags() {
+  local arg
+  for arg in "$@"; do
+    case "$arg" in
+      --kokoro) export IF_ENGINE_TTS_ENGINE=kokoro ;;
+      --omnivoice) export IF_ENGINE_TTS_ENGINE=omnivoice ;;
+    esac
+  done
+}
+apply_tts_flags "$@"
+
+if [[ "${IF_ENGINE_SKIP_BOOTSTRAP:-}" != "1" ]]; then
+  if launcher_needs_voice "$@"; then
+    "$BOOTSTRAP" --voice
+  else
+    "$BOOTSTRAP" --base
+  fi
+fi
+
+list_games() { "$PY" "$ENGINE" --list-games; }
+
+latest_session_for_game() {  # newest session bound to this game, if any
+  local game="$1" f
+  for f in $(ls -t sessions/*.jsonl 2>/dev/null); do
+    if head -1 "$f" | grep -q "\"game\": \"$game\""; then
+      basename "$f" .jsonl
+      return 0
+    fi
+  done
+  return 1
+}
+
+resolve_game() {  # echoes one slug, or lists matches on stderr and fails
+  local query="$1"
+  # Spaces and underscores are interchangeable with hyphens in slugs.
+  local norm
+  norm=$(printf '%s' "$query" | tr ' _' '--')
+  local matches count
+  matches=$(list_games | awk -v q="$query" '$1 == q { print }')
+  if [[ -z "$matches" ]]; then
+    matches=$(list_games | awk -v q="$norm" '$1 == q { print }')
+  fi
+  count=$(printf '%s' "$matches" | grep -c . || true)
+  if [[ "$count" -eq 1 ]]; then
+    printf '%s' "$matches" | awk '{print $1}'
+    return 0
+  fi
+  matches=$(list_games | grep -i -- "$query" || true)
+  if [[ -z "$matches" ]]; then
+    matches=$(list_games | grep -i -- "$norm" || true)
+  fi
+  count=$(printf '%s' "$matches" | grep -c . || true)
+  if [[ "$count" -eq 1 ]]; then
+    printf '%s' "$matches" | awk '{print $1}'
+    return 0
+  fi
+  if [[ "$count" -eq 0 ]]; then
+    echo "no game matches '$query' — browse with: ./play games" >&2
+  else
+    echo "'$query' matches $count games — pick one:" >&2
+    printf '%s\n' "$matches" >&2
+  fi
+  return 1
+}
+
+[[ $# -eq 0 ]] && exec "$PY" "$ENGINE"
+
+case "$1" in
+  games)
+    shift
+    if [[ $# -gt 0 ]]; then
+      list_games | grep -i -- "$*" || echo "no game matches '$*'"
+    else
+      list_games
+    fi
+    exit 0
+    ;;
+  sessions)
+    exec "$PY" "$ENGINE" --list
+    ;;
+esac
+
+new_session=0
+engine_args=()
+query_parts=()
+
+run_engine() {
+  if [[ ${#engine_args[@]} -gt 0 ]]; then
+    exec "$PY" "$ENGINE" "$@" "${engine_args[@]}"
+  fi
+  exec "$PY" "$ENGINE" "$@"
+}
+
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --new|--new-session)
+      new_session=1
+      shift
+      ;;
+    new)
+      if [[ ${#query_parts[@]} -eq 0 ]]; then
+        new_session=1
+      else
+        query_parts+=("$1")
+      fi
+      shift
+      ;;
+    --fast-mode|--no-fast-mode|--voice|--no-voice|--show-costs|--show-config|\
+    --kokoro|--omnivoice|\
+    --wake-word|--no-wake-word|--car-mode|--no-car-mode|\
+    --wake-word-preprocess|--no-wake-word-preprocess|\
+    --whisper-tags|--no-whisper-tags)
+      engine_args+=("$1")
+      shift
+      ;;
+    --compact-at|--game|--wake-word-threshold|--wake-word-model)
+      [[ $# -ge 2 ]] || { echo "usage: ./play $1 <value>" >&2; exit 1; }
+      engine_args+=("$1" "$2")
+      shift 2
+      ;;
+    --compact-at=*|--game=*|--wake-word-threshold=*|--wake-word-model=*)
+      engine_args+=("$1")
+      shift
+      ;;
+    --list|--list-games)
+      exec "$PY" "$ENGINE" "$@"
+      ;;
+    -*)
+      engine_args+=("$1")
+      shift
+      ;;
+    *)
+      query_parts+=("$1")
+      shift
+      ;;
+  esac
+done
+
+if [[ ${#query_parts[@]} -eq 0 ]]; then
+  if [[ "$new_session" -eq 1 ]]; then
+    run_engine --new
+  fi
+  run_engine
+fi
+
+name="${query_parts[*]}"
+# Game names win: ./play <game> resumes the newest session of that game.
+if game=$(resolve_game "$name" 2>/dev/null); then
+  if recent=$(latest_session_for_game "$game"); then
+    if [[ "$new_session" -eq 0 ]]; then
+      run_engine "$recent"  # newest playthrough of the game
+    fi
+  fi
+  run_engine --new --game "$game"  # never played or forced fresh
+fi
+if [[ -f "sessions/$name.jsonl" ]]; then
+  if [[ "$new_session" -eq 1 ]]; then
+    echo "session '$name' already exists; omit --new to resume it" >&2
+    exit 1
+  fi
+  run_engine "$name"  # exact session name: resume it
+fi
+resolve_game "$name" || exit 1               # re-run for the error/match listing

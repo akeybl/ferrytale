@@ -1,0 +1,13 @@
+.venv/
+__pycache__/
+*.pyc
+.DS_Store
+.env
+.cache/
+transcripts/
+sessions/
+voice.log
+assets/voice-clone-reference.mp3
+assets/voice-clone-whisper-reference.wav
+assets/voice-clone-whisper-reference.mp3
+assets/voice-clone-whisper-reference.txt
