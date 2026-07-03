@@ -32,15 +32,17 @@ For now, Ferrytale has only been tested on a high-end Mac — see
 
 ### See it in action
 
-https://github.com/user-attachments/assets/4c40e270-d4ca-436c-be86-2ff014ca60fb
-
-<p align="center"><sub><em>Ferrytale playing <a href="https://ifdb.org/viewgame?id=jdrbw1htq4ah8q57">Make It Good</a> by Jon Ingold — a washed-up inspector, a body upstairs, and every character in their own AI-designed voice. Sound on!</em></sub></p>
+<p align="center">
+  <a href="https://github.com/user-attachments/assets/4c40e270-d4ca-436c-be86-2ff014ca60fb"><img src="assets/demo.gif" alt="Ferrytale playing Make It Good — click to watch with sound"></a><br>
+  <sub><em>Ferrytale playing <a href="https://ifdb.org/viewgame?id=jdrbw1htq4ah8q57">Make It Good</a> by Jon Ingold — a washed-up inspector, a body upstairs, and every character in their own AI-designed voice. Silent excerpt — <strong><a href="https://github.com/user-attachments/assets/4c40e270-d4ca-436c-be86-2ff014ca60fb">watch with sound</a></strong></em></sub>
+</p>
 
 <br>
 
-https://github.com/user-attachments/assets/8bc9b299-6b4d-4ed6-8949-d6c25af744a8
-
-<p align="center"><sub><em>Ferrytale playing <a href="https://ifdb.org/viewgame?id=5xzoz5wimz4xxha">Superluminal Vagrant Twin</a> by C.E.J. Pacian — a broke space captain, a ten-million-cred job, and the ship's engineer crackling in over the comms, each voice in its own color. Sound on!</em></sub></p>
+<p align="center">
+  <a href="https://github.com/user-attachments/assets/8bc9b299-6b4d-4ed6-8949-d6c25af744a8"><img src="assets/demo-superluminal.gif" alt="Ferrytale playing Superluminal Vagrant Twin — click to watch with sound"></a><br>
+  <sub><em>Ferrytale playing <a href="https://ifdb.org/viewgame?id=5xzoz5wimz4xxha">Superluminal Vagrant Twin</a> by C.E.J. Pacian — a broke space captain, a ten-million-cred job, and the ship's engineer crackling in over the comms, each voice in its own color. Silent excerpt — <strong><a href="https://github.com/user-attachments/assets/8bc9b299-6b4d-4ed6-8949-d6c25af744a8">watch with sound</a></strong></em></sub>
+</p>
 
 ### Features
 
