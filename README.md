@@ -1,3 +1,11 @@
+> [!WARNING]
+> It's understood that while some authors are
+> [comfortable](https://allthingsjacq.com/interactive_fiction.html#clubfloyd:~:text=A%20NOTE%20TO%20AUTHORS%3A,using%20the%20contact%20page)
+> with ClubFloyd transcripts being online, they are not comfortable with
+> Ferrytale's use of a ClubFloyd transcript. Please file an
+> [issue](https://github.com/akeybl/ferrytale/issues/new) or email me
+> alex dot keybl (gmail) to have it removed from available transcripts.
+
 <p align="center">
   <img src="assets/logo.png" alt="Ferrytale logo — a ferry sailing on the waves of an open book" width="420">
 </p>
