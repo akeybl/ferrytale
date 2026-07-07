@@ -1,10 +1,12 @@
-> [!WARNING]
-> It's understood that while some authors are
-> [comfortable](https://allthingsjacq.com/interactive_fiction.html#clubfloyd:~:text=A%20NOTE%20TO%20AUTHORS%3A,using%20the%20contact%20page)
-> with ClubFloyd transcripts being online, they are not comfortable with
-> Ferrytale's use of a ClubFloyd transcript. Please file an
-> [issue](https://github.com/akeybl/ferrytale/issues/new) or email me
-> alex dot keybl (gmail) to have it removed from available transcripts.
+> [!IMPORTANT]
+> Ferrytale's catalog is now **opt-in**. Based on
+> [author feedback](https://intfiction.org/t/can-we-start-over-ferrytales-use-of-clubfloyd-transcripts/80950)
+> and the
+> [IFComp 2026 generative AI policy update](https://blog.ifcomp.org/post/807273791356010496/ifcomp-2026-generative-ai-policy-update),
+> the catalog has been cleared and games are only added with their author's
+> permission. Authors: to opt your game in, please file an
+> [issue](https://github.com/akeybl/ferrytale/issues/new) or email me at
+> alex dot keybl (gmail).
 
 <p align="center">
   <img src="assets/logo.png" alt="Ferrytale logo — a ferry sailing on the waves of an open book" width="420">
@@ -75,7 +77,7 @@ git clone https://github.com/akeybl/ferrytale.git
 cd ferrytale
 cp .env.example .env
 $EDITOR .env          # paste your GEMINI_API_KEY
-./play anchorhead     # or: ./play games   to browse the catalog
+./play get-corn      # or: ./play games   to browse the catalog
 ```
 
 That is the whole setup. The first run creates `.venv`, installs what it needs,
@@ -83,7 +85,7 @@ downloads the transcript, and starts playing — on macOS it even installs the v
 toolchain for you (Homebrew, Apple's Command Line Tools, portaudio, ffmpeg) and may
 ask for your password.
 
-**Want a lighter first run?** Add `--no-voice` (`./play --no-voice anchorhead`) to
+**Want a lighter first run?** Add `--no-voice` (`./play --no-voice get-corn`) to
 play by typing — it installs only a small text runtime and starts in seconds. The
 full voice experience downloads ~2 GB and compiles whisper.cpp the first time.
 
@@ -112,18 +114,25 @@ A few things that are not obvious coming from a traditional parser:
 
 ### Where the games come from
 
-The built-in catalog draws on
-[ClubFloyd transcripts](https://allthingsjacq.com/interactive_fiction.html#clubfloyd) —
-community playthroughs of a wide range of IF, **646 games** in all. Starting a
-game downloads only that game's transcript; nothing else is committed to the repo.
+The catalog is **opt-in**: it lists only games whose authors have given
+permission for Ferrytale to use a
+[ClubFloyd transcript](https://allthingsjacq.com/interactive_fiction.html#clubfloyd)
+(a community playthrough) of their work. It began as an opt-out mirror of the
+ClubFloyd archive; after
+[author feedback](https://intfiction.org/t/can-we-start-over-ferrytales-use-of-clubfloyd-transcripts/80950)
+and the
+[IFComp 2026 generative AI policy update](https://blog.ifcomp.org/post/807273791356010496/ifcomp-2026-generative-ai-policy-update),
+it was cleared and is being rebuilt on permission. **Authors: you're warmly
+invited to opt your games in** — file an
+[issue](https://github.com/akeybl/ferrytale/issues/new) or email me at
+alex dot keybl (gmail). Starting a game downloads only that game's
+transcript; nothing else is committed to the repo.
 
 **Please support the authors.** These are real games by real people, and Ferrytale is
 a way to *experience* their work, not a substitute for it. If a game you play here
 can be bought, or its author accepts tips or donations, please support them —
 ideally before you play through it. Many classic IF games are free, but supporting
-the people who made them is what keeps the medium alive. For example, *Anchorhead* — the game used in
-the Quick Start above — can be bought on
-[Steam](https://store.steampowered.com/app/726870/Anchorhead/).
+the people who made them is what keeps the medium alive.
 
 You can also bring your own material. Any narrative game works if you supply an
 OCR'd or transcribed Markdown-style transcript as `transcripts/<slug>.txt`.
@@ -148,10 +157,10 @@ Every mode accepts typed input — the differences are all in voice:
 
 | Command | What you get | Requires |
 | --- | --- | --- |
-| `./play --no-voice anchorhead` | Gemini only — type and press Enter | `GEMINI_API_KEY` |
-| `./play --kokoro anchorhead` | Spoken input + Kokoro narration | `GEMINI_API_KEY`, local audio, whisper.cpp |
-| `IF_ENGINE_OMNIVOICE_CHARACTER_VOICES=0 ./play anchorhead` | Spoken input + OmniVoice narration (no character voices) | `GEMINI_API_KEY`, local audio, whisper.cpp |
-| `./play anchorhead` (with `ELEVENLABS_API_KEY`) | OmniVoice narration + generated character voices | Gemini + ElevenLabs for first-time voice design |
+| `./play --no-voice get-corn` | Gemini only — type and press Enter | `GEMINI_API_KEY` |
+| `./play --kokoro get-corn` | Spoken input + Kokoro narration | `GEMINI_API_KEY`, local audio, whisper.cpp |
+| `IF_ENGINE_OMNIVOICE_CHARACTER_VOICES=0 ./play get-corn` | Spoken input + OmniVoice narration (no character voices) | `GEMINI_API_KEY`, local audio, whisper.cpp |
+| `./play get-corn` (with `ELEVENLABS_API_KEY`) | OmniVoice narration + generated character voices | Gemini + ElevenLabs for first-time voice design |
 
 On a lower-spec machine, **Kokoro** is the lighter choice: it is CPU-friendlier and
 skips loading the OmniVoice model.
@@ -160,12 +169,12 @@ skips loading the OmniVoice model.
 
 ```sh
 ./play                          # resume your most recent session
-./play anchorhead               # match by title, author, or slug
-./play --new anchorhead         # start a fresh playthrough
-./play --new --fast-mode anchorhead
-./play games anchor             # browse the catalog, optionally filtered
+./play get-corn                 # match by title, author, or slug
+./play --new get-corn           # start a fresh playthrough
+./play --new --fast-mode get-corn
+./play games corn               # browse the catalog, optionally filtered
 ./play sessions                 # list saved sessions
-./play --no-voice anchorhead
+./play --no-voice get-corn
 ```
 
 Ferrytale keeps **one canonical playthrough per game**. The first `./play <game>`
@@ -175,7 +184,7 @@ Under the hood, `play` wraps a lower-level engine, `ferrytale.py`, which you can
 directly:
 
 ```sh
-.venv/bin/python ferrytale.py --new --game anchorhead
+.venv/bin/python ferrytale.py --new --game get-corn
 .venv/bin/python ferrytale.py --list
 .venv/bin/python ferrytale.py --list-games
 ```
@@ -219,7 +228,7 @@ game, plus an `index.json` of downloaded title, author, and source metadata.
 game's transcript if it is missing. To prefetch one by hand:
 
 ```sh
-.venv/bin/python build_transcripts.py --game anchorhead
+.venv/bin/python build_transcripts.py --game get-corn
 ```
 
 The catalog's source links point at [Web Archive](https://web.archive.org)
@@ -325,7 +334,7 @@ wait before you hear anything:
 **Kokoro** is the lighter alternative, working in sentence-sized chunks:
 
 ```sh
-./play --kokoro anchorhead
+./play --kokoro get-corn
 ```
 
 (`--omnivoice` switches back to the default engine if you have set
@@ -404,7 +413,7 @@ Design preview that seeds each cached character voice.
 
 The cache is gitignored. To share a game's voices and skip first-time design calls
 on another machine, copy that game's directory — for example
-`.cache/elevenlabs-voices/anchorhead/` — to the same path on the other machine. Or
+`.cache/elevenlabs-voices/get-corn/` — to the same path on the other machine. Or
 place shared caches anywhere and point to them:
 
 ```text
@@ -427,7 +436,7 @@ output carries no color codes.
 **Pre-generating voices.** To create voices before you play:
 
 ```sh
-.venv/bin/python scripts/pregenerate_character_voices.py anchorhead
+.venv/bin/python scripts/pregenerate_character_voices.py get-corn
 ```
 
 By default it asks Gemini to identify the distinct dialogue speakers in the
@@ -435,14 +444,14 @@ transcript, then creates missing voices one at a time. To skip discovery and
 generate a known set:
 
 ```sh
-.venv/bin/python scripts/pregenerate_character_voices.py anchorhead \
+.venv/bin/python scripts/pregenerate_character_voices.py get-corn \
   --character "Michael" --character "real estate agent"
 ```
 
 Or preview without creating anything:
 
 ```sh
-.venv/bin/python scripts/pregenerate_character_voices.py anchorhead --dry-run
+.venv/bin/python scripts/pregenerate_character_voices.py get-corn --dry-run
 ```
 
 Cached voices are surfaced to the model inside the OmniVoice system prompt:
@@ -505,7 +514,7 @@ whispered chunks.
 you want the model to request a whisper:
 
 ```sh
-./play --whisper-tags anchorhead
+./play --whisper-tags get-corn
 ```
 
 With them on, the model may wrap visible narration or dialogue in
@@ -568,8 +577,8 @@ IF_ENGINE_AEC_REFERENCE_DELAY_MS=0
 **Wake word.** The bundled wake word is `Okay` (`models/wake-word/okay.onnx`).
 
 ```sh
-./play --wake-word anchorhead    # enable wake word for normal use
-./play --car-mode anchorhead     # enable car/Bluetooth mode
+./play --wake-word get-corn    # enable wake word for normal use
+./play --car-mode get-corn     # enable car/Bluetooth mode
 ```
 
 Car mode turns the wake word on automatically and lowers the default threshold to
@@ -716,8 +725,8 @@ wake model without changing your game configuration.
 Cheap engine checks — piped input runs without the live interrupt UI or voice:
 
 ```sh
-printf 'look around\n/quit\n' | .venv/bin/python ferrytale.py --new --game anchorhead --no-voice
-.venv/bin/python ferrytale.py --compact-at 1000 --new --game anchorhead --no-voice
+printf 'look around\n/quit\n' | .venv/bin/python ferrytale.py --new --game get-corn --no-voice
+.venv/bin/python ferrytale.py --compact-at 1000 --new --game get-corn --no-voice
 ```
 
 To print the effective configuration — engine, TTS, compaction threshold, and any
@@ -774,7 +783,8 @@ Gemini character-description call.
 - `--fast-mode` only changes the latency tier — the local accounting uses the same
   token rates either way.
 
-Measured costs for *Anchorhead* (the Quick Start game, ~120k-token transcript),
+Measured costs for *Anchorhead* (a ~120k-token transcript, measured before the
+opt-in catalog reset),
 taken from real API responses on 2026-07-03 via `scripts/cost_report.py`:
 
 | Event | Measured cost |
@@ -797,7 +807,7 @@ call. To re-measure on any game (this spends real API money — the full
 Anchorhead report costs about `$0.63`):
 
 ```sh
-.venv/bin/python scripts/cost_report.py anchorhead
+.venv/bin/python scripts/cost_report.py get-corn
 .venv/bin/python scripts/cost_report.py <game> --turns 1 --skip-voices   # cheaper
 ```
 
