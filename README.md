@@ -114,7 +114,7 @@ A few things that are not obvious coming from a traditional parser:
 
 The built-in catalog draws on
 [ClubFloyd transcripts](https://allthingsjacq.com/interactive_fiction.html#clubfloyd) —
-community playthroughs of a wide range of IF, **649 games** in all. Starting a
+community playthroughs of a wide range of IF, **648 games** in all. Starting a
 game downloads only that game's transcript; nothing else is committed to the repo.
 
 **Please support the authors.** These are real games by real people, and Ferrytale is
