@@ -11,6 +11,8 @@
 #   ./play --car-mode <game>   enable car/Bluetooth wake-word defaults
 #   ./play --whisper-tags <game>
 #                              allow OmniVoice <whisper> style tags
+#   ./play <URL>               install + play a transcript page directly
+#                              (ClubFloyd pages, direct or web.archive.org)
 #   ./play <session-name>      resume a specific session by exact name
 #   ./play games [filter]      list games (optionally filtered)
 #   ./play sessions            list saved sessions
@@ -25,7 +27,7 @@ BOOTSTRAP=scripts/install
 PY=.venv/bin/python
 ENGINE=ferrytale.py
 
-usage() { sed -n '2,17p' "$0" | sed 's/^# \{0,1\}//'; }
+usage() { sed -n '2,19p' "$0" | sed 's/^# \{0,1\}//'; }
 
 case "${1:-}" in
   -h|--help|help)
@@ -210,14 +212,23 @@ if [[ ${#query_parts[@]} -eq 0 ]]; then
 fi
 
 name="${query_parts[*]}"
-# Game names win: ./play <game> resumes the newest session of that game.
-if game=$(resolve_game "$name" 2>/dev/null); then
+launch_game() {  # resume the newest session of a slug, or start fresh
+  local game="$1" recent
   if recent=$(latest_session_for_game "$game"); then
     if [[ "$new_session" -eq 0 ]]; then
       run_engine "$recent"  # newest playthrough of the game
     fi
   fi
   run_engine --new --game "$game"  # never played or forced fresh
+}
+# A transcript page URL installs the game directly — no catalog entry needed.
+if [[ "$name" == http://* || "$name" == https://* ]]; then
+  game=$("$PY" build_transcripts.py --url "$name") || exit 1
+  launch_game "$game"
+fi
+# Game names win: ./play <game> resumes the newest session of that game.
+if game=$(resolve_game "$name" 2>/dev/null); then
+  launch_game "$game"
 fi
 if [[ -f "sessions/$name.jsonl" ]]; then
   if [[ "$new_session" -eq 1 ]]; then

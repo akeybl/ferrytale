@@ -491,6 +491,55 @@ def build_transcript_text(entry: dict) -> str | None:
     return assemble_transcript(clubfloyd_items(decode_text(raw)))
 
 
+def page_title_metadata(page_html: str) -> tuple[str, str]:
+    """Title and author from a transcript page's <title>, e.g.
+    'AllThingsJacq.com - ... | ClubFloyd - January 28, 2024 - Get Corn by
+    Joey Tanden' -> ('Get Corn', 'Joey Tanden')."""
+    match = re.search(r"<title>(.*?)</title>", page_html, re.S | re.I)
+    text = html_to_text(match.group(1)).strip() if match else ""
+    part = text.split(" - ")[-1].strip() if " - " in text else text
+    if " by " in part:
+        title, author = part.rsplit(" by ", 1)
+        return title.strip(), author.strip()
+    return part, ""
+
+
+def download_from_url(url: str, force: bool = False) -> tuple[str, Path]:
+    """Install a transcript straight from a supported page URL — it does not
+    need to be in the catalog. Supported now: ClubFloyd pages, either direct
+    (allthingsjacq.com) or via a web.archive.org snapshot. Returns
+    (slug, transcript_path); the slug comes from the page's own title."""
+    url = str(url or "").strip()
+    if not is_clubfloyd_source(url):
+        raise RuntimeError(
+            "unsupported URL — only ClubFloyd transcript pages are supported "
+            f"for now ({CLUBFLOYD_BASE}intfic_clubfloyd_*.html, directly or "
+            "through a web.archive.org snapshot)"
+        )
+    raw = fetch(url, source_cache_name({"source": url, "href": ""}))
+    page_html = decode_text(raw)
+    text = assemble_transcript(clubfloyd_items(page_html))
+    if not text or len(text) < 400:
+        raise RuntimeError(f"no usable transcript found at {url}")
+    title, author = page_title_metadata(page_html)
+    slug = slugify(title) if title else ""
+    if not slug:
+        slug = slugify(Path(urllib.parse.urlparse(url).path).stem)
+    entry = {
+        "title": title or slug.replace("-", " ").title(),
+        "author": author,
+        "source": url,
+    }
+    TRANSCRIPTS_DIR.mkdir(exist_ok=True)
+    path = TRANSCRIPTS_DIR / f"{slug}.txt"
+    existing_source = (load_local_index().get(slug) or {}).get("source")
+    if path.exists() and path.stat().st_size > 0 and not force and existing_source == url:
+        return slug, path
+    path.write_text(text, encoding="utf-8")
+    write_local_index_entry(slug, entry)
+    return slug, path
+
+
 def download_game(slug: str, catalog: dict[str, dict] | None = None, force: bool = False) -> Path:
     catalog = catalog or load_catalog()
     entry = catalog.get(slug)
@@ -565,15 +614,28 @@ def main() -> int:
                         help="download every catalogued transcript into transcripts/")
     parser.add_argument("--game", metavar="SLUG",
                         help="download one catalogued transcript into transcripts/")
+    parser.add_argument("--url", metavar="URL",
+                        help="install a transcript straight from a supported page "
+                             "URL (no catalog entry needed); prints the slug")
     parser.add_argument("--force", action="store_true",
                         help="redownload transcript files even if they already exist")
     args = parser.parse_args()
 
-    if args.all and args.game:
-        parser.error("--all cannot be combined with --game")
+    if sum(bool(x) for x in (args.all, args.game, args.url)) > 1:
+        parser.error("choose only one of --all, --game, --url")
 
-    if not args.all and not args.game:
-        parser.error("choose --game SLUG or --all")
+    if not args.all and not args.game and not args.url:
+        parser.error("choose --game SLUG, --url URL, or --all")
+
+    if args.url:
+        try:
+            slug, path = download_from_url(args.url, force=args.force)
+        except RuntimeError as exc:
+            print(f"error: {exc}", file=sys.stderr)
+            return 1
+        print(f"wrote {path.relative_to(BASE_DIR)}", file=sys.stderr)
+        print(slug)
+        return 0
 
     catalog = load_catalog()
     if args.game:

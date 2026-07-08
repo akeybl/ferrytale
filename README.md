@@ -78,6 +78,8 @@ cd ferrytale
 cp .env.example .env
 $EDITOR .env          # paste your GEMINI_API_KEY
 ./play get-corn      # or: ./play games   to browse the catalog
+./play https://allthingsjacq.com/intfic_clubfloyd_20240105.html
+                     # ...or play straight from a transcript page URL
 ```
 
 That is the whole setup. The first run creates `.venv`, installs what it needs,
@@ -134,9 +136,14 @@ can be bought, or its author accepts tips or donations, please support them —
 ideally before you play through it. Many classic IF games are free, but supporting
 the people who made them is what keeps the medium alive.
 
-You can also bring your own material. Any narrative game works if you supply an
-OCR'd or transcribed Markdown-style transcript as `transcripts/<slug>.txt`.
-Ferrytale never fetches transcripts from non-ClubFloyd sources on its own.
+You can also bring your own material, no catalog entry needed. Point `./play`
+at a supported transcript page URL — a ClubFloyd page, either direct
+(`https://allthingsjacq.com/intfic_clubfloyd_….html`) or a
+`web.archive.org` snapshot of one — and it is fetched, parsed, and installed
+locally under a slug taken from the page's own title. Or supply any narrative
+game yourself as an OCR'd or transcribed Markdown-style transcript at
+`transcripts/<slug>.txt`. Ferrytale never fetches transcripts from
+non-ClubFloyd sources on its own.
 
 **Mysteries are an especially good fit** — questioning suspects, chasing leads, and
 assembling story state all map naturally onto the interaction model. Two worth
